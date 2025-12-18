@@ -485,6 +485,9 @@ def blob_get(file):
     blob_name = f"{path}/{file}"
     return storage_client().get_bucket(bucket_name).blob(blob_name)
 
+def blob_fetch(file):
+    bucket_name, _ = _get_bucket_and_common_prefix()
+    return storage_client().get_bucket(bucket_name).get_blob(file)
 
 def blob_list(prefix="", delimiter=None):
     bucket_name, path = _get_bucket_and_common_prefix()
@@ -664,7 +667,8 @@ class _ConfigBlobs:
     
         # sort blobs so hash is consistent
         for blob in sorted(all, key=lambda b: b.name):
-            h.update(blob.md5_hash.encode("utf-8"))
+            # In some circumstances an object doesn't have MD5_HASH for e.g. CMEK
+            h.update((blob_fetch(blob.name).md5_hash if blob.md5_hash is None else blob.md5_hash).encode("utf-8"))
         return h.hexdigest()
 
 @dataclass
